@@ -14,6 +14,8 @@ from database.database import (
     add_operator,
     add_order,
     check_adm,
+    check_order,
+    delete_order,
     take_op,
     get_sum,
 )
@@ -107,7 +109,7 @@ class info(StatesGroup):
     date = State()
 
 
-@dp.message_handler(Command("test"))
+@dp.message_handler(Command("spravk"))
 async def command_spravka(message: Message):
     print("123")
     await message.answer("Укажите адрес помещения")
@@ -135,10 +137,13 @@ async def set_date(message: Message, state: FSMContext):
 
 @dp.message_handler(content_types=["photo"])
 async def get_photo(message: Message):
-    file_id = message.photo[-1].file_id
-    await bot.send_photo(chat_id=take_op(), photo=file_id)
-    await message.reply("Отправили Ваш чек на рассмотрение оператору, ожидайте ответа!")
-    await op_answer(message, message.from_user.id, take_op())
+    if check_order(message.from_user.id):
+        file_id = message.photo[-1].file_id
+        await bot.send_photo(chat_id=take_op(), photo=file_id)
+        await message.reply(
+            "Отправили Ваш чек на рассмотрение оператору, ожидайте ответа!"
+        )
+        await op_answer(message, message.from_user.id, take_op())
 
 
 async def op_answer(message: Message, id, id_op):
@@ -156,6 +161,7 @@ async def process(call: types.CallbackQuery):
     ans = call.data.split("_")[1]
     id = call.data.split("_")[2]
     id_op = call.data.split("_")[3]
+    delete_order(id)
     if ans == "yes":
         await bot.send_message(chat_id=id, text="Ваш чек подтвержден")
     else:
