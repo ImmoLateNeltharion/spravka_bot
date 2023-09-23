@@ -84,12 +84,24 @@ def add_order(id, sum):
 def check_adm(id):
     cur.execute("SELECT id FROM admin WHERE tg_id = (?)", (id,))
     temp = cur.fetchall()
-    print(temp)
-    print(len(temp))
     if len(temp) == 0:
         return False
     else:
         return True
+
+
+def check_order(id):
+    cur.execute("SELECT id FROM orders WHERE tg_id = (?)", (id,))
+    temp = cur.fetchall()
+    if len(temp) == 0:
+        return False
+    else:
+        return True
+
+
+def delete_order(id):
+    cur.execute("DELETE FROM orders WHERE tg_id = (?)", (id,))
+    conn.commit()
 
 
 def take_op():
