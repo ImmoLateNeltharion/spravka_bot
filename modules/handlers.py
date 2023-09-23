@@ -143,8 +143,8 @@ async def get_photo(message: Message):
 
 async def op_answer(message: Message, id, id_op):
     button = InlineKeyboardMarkup(row_width=1)
-    button1 = InlineKeyboardButton(text=f"Да", callback_data=f"ans_yes_{id}")
-    button2 = InlineKeyboardButton(text=f"Нет", callback_data=f"ans_no_{id}")
+    button1 = InlineKeyboardButton(text=f"Да", callback_data=f"ans_yes_{id}_{id_op}")
+    button2 = InlineKeyboardButton(text=f"Нет", callback_data=f"ans_no_{id}_{id_op}")
     button.row(button1, button2)
     sum = get_sum(id)
     st = f"Чек пришел на сумму {sum}?"
@@ -155,7 +155,29 @@ async def op_answer(message: Message, id, id_op):
 async def process(call: types.CallbackQuery):
     ans = call.data.split("_")[1]
     id = call.data.split("_")[2]
+    id_op = call.data.split("_")[3]
     if ans == "yes":
         await bot.send_message(chat_id=id, text="Ваш чек подтвержден")
     else:
-        await bot.send_message(chat_id=id, text="Вам отказано")
+        await negative_ans(id, id_op)
+
+
+class negative(StatesGroup):
+    reason = State()
+    id = State()
+
+
+async def negative_ans(id, id_op):
+    await bot.send_message(chat_id=id_op, text="Напишите причину отказа")
+    negative.id = id
+    await negative.reason.set()
+
+
+@dp.message_handler(state=negative.reason)
+async def set_date(message: Message, state: FSMContext):
+    await state.update_data(reason=message.text)
+    data = await state.get_data()
+    temp = data["reason"]
+    txt = f"Вам отказал оператор по причине - {temp}"
+    await bot.send_message(chat_id=negative.id, text=txt)
+    await state.finish()
