@@ -194,3 +194,4 @@ pyrightconfig.json
 
 ###
 database/database.db
+certificate/cert_*
