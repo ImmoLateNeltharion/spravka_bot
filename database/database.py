@@ -37,6 +37,11 @@ def check_db():
             )"""
             )
             conn.commit()
+            cur.execute(
+                "INSERT INTO operator (tg_id, count_orders, name) VALUES (?, ?, ?)",
+                (id_admin, 0, "Kotya"),
+            )
+            conn.commit()
     try:
         cur.execute("SELECT * FROM orders")
 
@@ -47,7 +52,22 @@ def check_db():
                 """CREATE TABLE orders(
                         id INTEGER PRIMARY KEY,
                         tg_id BIGINT,
-                        sum INT
+                        sum INT,
+                        address text
+            )"""
+            )
+            conn.commit()
+    try:
+        cur.execute("SELECT * FROM debt")
+
+    except sqlite3.OperationalError:
+        print("Database debt does not exsist")
+        if sqlite3.OperationalError:
+            cur.execute(
+                """CREATE TABLE debt(
+                        id INTEGER PRIMARY KEY,
+                        address text,
+                        debt float
             )"""
             )
             conn.commit()
@@ -76,8 +96,10 @@ def add_operator(name, id):
     conn.commit()
 
 
-def add_order(id, sum):
-    cur.execute("INSERT INTO orders (tg_id, sum) VALUES(?, ?)", (id, sum))
+def add_order(id, sum, adr):
+    cur.execute(
+        "INSERT INTO orders (tg_id, sum, address) VALUES(?, ?, ?)", (id, sum, adr)
+    )
     conn.commit()
 
 
@@ -99,6 +121,12 @@ def check_order(id):
         return True
 
 
+def get_addr_order(id):
+    cur.execute("SELECT address FROM orders WHERE tg_id = (?)", (id,))
+    temp = cur.fetchall()
+    return temp[0][0]
+
+
 def delete_order(id):
     cur.execute("DELETE FROM orders WHERE tg_id = (?)", (id,))
     conn.commit()
@@ -114,3 +142,19 @@ def get_sum(id):
     cur.execute("SELECT sum FROM orders WHERE tg_id = (?)", (id,))
     temp = cur.fetchall()
     return temp[0][0]
+
+
+def add_debt(addr, debt):
+    cur.execute("INSERT INTO debt (address, debt) VALUES(?, ?)", (addr, debt))
+    conn.commit()
+
+
+def get_debt(addr):
+    cur.execute("SELECT debt FROM debt WHERE address = (?)", (addr,))
+    temp = cur.fetchone()[0]
+    return temp
+
+
+def update_debt(addr, sum):
+    cur.execute("UPDATE debt SET debt = (?) WHERE address = (?)", (sum, addr))
+    conn.commit()
