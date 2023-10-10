@@ -7,17 +7,22 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 from .run import bot, dp
 from config.config import id_admin
 from config.message import start
+from certificate.edit import edit_cert
 from database.database import (
     sql_start,
     sql_stop,
     add_admin,
     add_operator,
-    add_order,
     check_adm,
+    add_debt,
+    add_order,
     check_order,
     delete_order,
+    get_addr_order,
     take_op,
     get_sum,
+    get_debt,
+    update_debt,
 )
 
 
@@ -39,6 +44,37 @@ async def command_start(message: Message):
 @dp.message_handler(Command("spravka"))
 async def command_spravka(messgae: Message):
     pass
+
+
+class addr(StatesGroup):
+    add = State()
+    debt = State()
+
+
+@dp.message_handler(Command("add_debt"))
+async def command_add_debt(message: Message):
+    if check_adm(message.from_user.id):
+        await message.answer("Напишите адрес")
+        await addr.add.set()
+    else:
+        await message.answer("Ошибка!\n")
+    pass
+
+
+@dp.message_handler(state=addr.add)
+async def set_adr(message: Message, state: FSMContext):
+    await state.update_data(adr=message.text)
+    await message.answer("Напишите долг (В случае его отсутствия напишите 0)")
+    await addr.next()
+
+
+@dp.message_handler(state=addr.debt)
+async def set_id(message: Message, state: FSMContext):
+    await state.update_data(debt=message.text)
+    data = await state.get_data()
+    add_debt(data["adr"], data["debt"])
+    await message.answer("Данные адресса добавлены!")
+    await state.finish()
 
 
 # Добавление администратора
@@ -106,33 +142,28 @@ async def set_id(message: Message, state: FSMContext):
 # Начало получения справки
 class info(StatesGroup):
     address = State()
-    date = State()
 
 
-@dp.message_handler(Command("spravk"))
+@dp.message_handler(Command("sprav"))
 async def command_spravka(message: Message):
-    print("123")
     await message.answer("Укажите адрес помещения")
     await info.address.set()
 
 
 @dp.message_handler(state=info.address)
-async def set_add(message: Message, state: FSMContext):
-    await state.update_data(add=message.text)
-    await message.answer("Отлично!\nТеперь напишите дату")
-    await info.next()
-
-
-@dp.message_handler(state=info.date)
-async def set_date(message: Message, state: FSMContext):
-    await state.update_data(date=message.text)
+async def set_addr(message: Message, state: FSMContext):
+    await state.update_data(addr=message.text)
     data = await state.get_data()
-    # Формула для расчета суммы оплаты
-    sum = 0
-    await message.answer(f"Сумма оплаты состовляет - {sum}")
-    add_order(message.from_user.id, sum)
-    await state.finish()
-    await message.answer(f"Пришлите фотографию чека оплаты")
+    debt = get_debt(data["addr"])
+    if debt != 0:
+        await message.answer(f"Сумма оплаты состовляет - {debt}")
+        add_order(message.from_user.id, debt, data["addr"])
+        await state.finish()
+        await message.answer(f"Пришлите фотографию чека оплаты")
+    else:
+        file = edit_cert(data["addr"])
+        await message.reply_document(document=open(f"{file}", "rb"))
+        await message.answer("Вот ваша справка об отсутствии задолженности.")
 
 
 @dp.message_handler(content_types=["photo"])
@@ -143,10 +174,10 @@ async def get_photo(message: Message):
         await message.reply(
             "Отправили Ваш чек на рассмотрение оператору, ожидайте ответа!"
         )
-        await op_answer(message, message.from_user.id, take_op())
+        await op_answer(message.from_user.id, take_op())
 
 
-async def op_answer(message: Message, id, id_op):
+async def op_answer(id, id_op):
     button = InlineKeyboardMarkup(row_width=1)
     button1 = InlineKeyboardButton(text=f"Да", callback_data=f"ans_yes_{id}_{id_op}")
     button2 = InlineKeyboardButton(text=f"Нет", callback_data=f"ans_no_{id}_{id_op}")
@@ -161,11 +192,14 @@ async def process(call: types.CallbackQuery):
     ans = call.data.split("_")[1]
     id = call.data.split("_")[2]
     id_op = call.data.split("_")[3]
-    delete_order(id)
     if ans == "yes":
         await bot.send_message(chat_id=id, text="Ваш чек подтвержден")
+        address = get_addr_order(id)
+        print(address)
+        update_debt(address, 0)
     else:
         await negative_ans(id, id_op)
+    delete_order(id)
 
 
 class negative(StatesGroup):
