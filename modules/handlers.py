@@ -5,6 +5,7 @@ from aiogram.dispatcher.filters import Command
 from aiogram.dispatcher.filters.state import State, StatesGroup
 
 from .run import bot, dp
+from .keyboard import kb, kbm
 from config.config import id_admin
 from config.message import start
 from certificate.edit import edit_cert
@@ -23,6 +24,9 @@ from database.database import (
     get_sum,
     get_debt,
     update_debt,
+    check_adr,
+    add_month,
+    get_month,
 )
 
 
@@ -38,12 +42,21 @@ async def send_to_adm_sd(dp):
 
 @dp.message_handler(Command("start"))
 async def command_start(message: Message):
-    await message.answer(f"Здравствуйте, {message.from_user.first_name}!\n{start}")
+    await message.answer(
+        f"Здравствуйте, {message.from_user.first_name}!\n{start}", reply_markup=kbm
+    )
 
 
-@dp.message_handler(Command("spravka"))
-async def command_spravka(messgae: Message):
-    pass
+@dp.callback_query_handler(text="half_a_month")
+async def cb_half_a_month(call: types.CallbackQuery):
+    add_month(call.message.chat.id, 0)
+    await set_addr(call)
+
+
+@dp.callback_query_handler(text="month")
+async def cb_month(call: types.CallbackQuery):
+    add_month(call.message.chat.id, 1)
+    await set_addr(call)
 
 
 class addr(StatesGroup):
@@ -142,28 +155,51 @@ async def set_id(message: Message, state: FSMContext):
 # Начало получения справки
 class info(StatesGroup):
     address = State()
+    square = State()
 
 
-@dp.message_handler(Command("sprav"))
-async def command_spravka(message: Message):
-    await message.answer("Укажите адрес помещения")
+@dp.callback_query_handler(text="spravka")
+async def set_addr(call: types.CallbackQuery):
+    await call.message.answer("Укажите адрес помещения")
     await info.address.set()
 
 
 @dp.message_handler(state=info.address)
-async def set_addr(message: Message, state: FSMContext):
+async def set_square(message: Message, state: FSMContext):
     await state.update_data(addr=message.text)
+    await message.answer("Напишите площадь помещения")
+    await info.square.set()
+
+
+@dp.message_handler(state=info.square)
+async def get_addr_spr(message: Message, state: FSMContext):
+    await state.update_data(sqr=message.text)
     data = await state.get_data()
-    debt = get_debt(data["addr"])
-    if debt != 0:
-        await message.answer(f"Сумма оплаты состовляет - {debt}")
-        add_order(message.from_user.id, debt, data["addr"])
-        await state.finish()
-        await message.answer(f"Пришлите фотографию чека оплаты")
+    if check_adr(data["addr"]):
+        rate = 1000
+        data = await state.get_data()
+        debt = get_debt(data["addr"])
+        check_month = get_month(message.from_user.id)
+        curr_sum = rate * int(data["sqr"])
+        print(curr_sum)
+        if check_month != 1:
+            curr_sum /= 2
+        print(curr_sum)
+        if debt < curr_sum:
+            await message.answer(f"Сумма оплаты составляет - {curr_sum - debt}")
+            add_order(message.from_user.id, curr_sum - debt, data["addr"])
+            await state.finish()
+            await message.answer(f"Пришлите фотографию чека оплаты")
+        else:
+            file = edit_cert(data["addr"])
+            await message.reply_document(document=open(f"{file}", "rb"))
+            await message.answer("Вот ваша справка об отсутствии задолженности.")
     else:
-        file = edit_cert(data["addr"])
-        await message.reply_document(document=open(f"{file}", "rb"))
-        await message.answer("Вот ваша справка об отсутствии задолженности.")
+        await state.finish()
+        await message.answer(
+            f"Не можем найти Ваш адрес в нашей базе данных.\nПроверьте правильность введенных данных и попробуйте ещё раз.",
+        )
+        await command_start(message)
 
 
 @dp.message_handler(content_types=["photo"])
@@ -196,7 +232,10 @@ async def process(call: types.CallbackQuery):
         await bot.send_message(chat_id=id, text="Ваш чек подтвержден")
         address = get_addr_order(id)
         print(address)
-        update_debt(address, 0)
+        update_debt(address, get_sum(id))
+        file = edit_cert(get_addr_order(id))
+        await call.message.reply_document(document=open(f"{file}", "rb"))
+        await call.message.answer("Вот ваша справка об отсутствии задолженности.")
     else:
         await negative_ans(id, id_op)
     delete_order(id)

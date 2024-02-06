@@ -7,9 +7,15 @@ cur = conn.cursor()
 
 
 def check_db():
+    cur.execute("DROP TABLE orders")
+    conn.commit()
+    cur.execute("DROP TABLE month")
+    conn.commit()
+    cur.execute("DROP TABLE debt")
+    conn.commit()
+
     try:
         cur.execute("SELECT * FROM admin")
-
     except sqlite3.OperationalError:
         print("Database users does not exsist")
         if sqlite3.OperationalError:
@@ -22,9 +28,9 @@ def check_db():
             conn.commit()
             cur.execute("INSERT INTO admin (tg_id) VALUES (?)", (id_admin,))
             conn.commit()
+
     try:
         cur.execute("SELECT * FROM operator")
-
     except sqlite3.OperationalError:
         print("Database operator does not exsist")
         if sqlite3.OperationalError:
@@ -42,9 +48,9 @@ def check_db():
                 (id_admin, 0, "Kotya"),
             )
             conn.commit()
+
     try:
         cur.execute("SELECT * FROM orders")
-
     except sqlite3.OperationalError:
         print("Database orders does not exsist")
         if sqlite3.OperationalError:
@@ -57,9 +63,9 @@ def check_db():
             )"""
             )
             conn.commit()
+
     try:
         cur.execute("SELECT * FROM debt")
-
     except sqlite3.OperationalError:
         print("Database debt does not exsist")
         if sqlite3.OperationalError:
@@ -68,6 +74,21 @@ def check_db():
                         id INTEGER PRIMARY KEY,
                         address text,
                         debt float
+            )"""
+            )
+            conn.commit()
+            cur.execute("INSERT INTO debt (address, debt) VALUES (1, 0)")
+            conn.commit()
+    try:
+        cur.execute("SELECT * FROM month")
+    except sqlite3.OperationalError:
+        print("Database month does not exsist")
+        if sqlite3.OperationalError:
+            cur.execute(
+                """CREATE TABLE month(
+                        id INTEGER PRIMARY KEY,
+                        tg_id BIGINT,
+                        month int
             )"""
             )
             conn.commit()
@@ -158,3 +179,26 @@ def get_debt(addr):
 def update_debt(addr, sum):
     cur.execute("UPDATE debt SET debt = (?) WHERE address = (?)", (sum, addr))
     conn.commit()
+
+
+def check_adr(addr):
+    cur.execute("SELECT id FROM debt WHERE address = (?)", (addr,))
+    temp = cur.fetchall()
+    if len(temp) == 0:
+        return False
+    else:
+        return True
+
+
+def add_month(id, month):
+    cur.execute("INSERT INTO month (tg_id, month) VALUES(?, ?)", (id, month))
+    conn.commit()
+
+
+def get_month(id):
+    cur.execute("SELECT month FROM month WHERE tg_id = (?)", (id,))
+    temp = cur.fetchall()
+    print(temp)
+    cur.execute("DELETE FROM month WHERE tg_id = (?)", (id,))
+    conn.commit()
+    return temp[0][0]
