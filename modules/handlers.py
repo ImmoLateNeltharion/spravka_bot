@@ -160,7 +160,7 @@ class info(StatesGroup):
 
 @dp.callback_query_handler(text="spravka")
 async def set_addr(call: types.CallbackQuery):
-    await call.message.answer("Укажите адрес помещения")
+    await call.message.answer("Укажите полный адрес помещения")
     await info.address.set()
 
 

@@ -94,6 +94,10 @@ def check_db():
             conn.commit()
             cur.execute("INSERT INTO debt (address, debt) VALUES ('Ул. 2', 3000)")
             conn.commit()
+            cur.execute(
+                "INSERT INTO debt (address, debt) VALUES ('Улица Кирова, дом.2, квартира 10', 3000)"
+            )
+            conn.commit()
     try:
         cur.execute("SELECT * FROM month")
     except sqlite3.OperationalError:
