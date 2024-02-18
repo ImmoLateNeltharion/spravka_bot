@@ -5,7 +5,7 @@ from aiogram.dispatcher.filters import Command
 from aiogram.dispatcher.filters.state import State, StatesGroup
 
 from .run import bot, dp
-from .keyboard import kb, kbm
+from .keyboard import kbm
 from config.config import id_admin
 from config.message import start
 from certificate.edit import edit_cert
@@ -167,7 +167,7 @@ async def set_addr(call: types.CallbackQuery):
 @dp.message_handler(state=info.address)
 async def set_square(message: Message, state: FSMContext):
     await state.update_data(addr=message.text)
-    await message.answer("Напишите площадь помещения")
+    await message.answer("Напишите номер помещения")
     await info.square.set()
 
 

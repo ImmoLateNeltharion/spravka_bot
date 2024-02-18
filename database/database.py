@@ -7,10 +7,6 @@ cur = conn.cursor()
 
 
 def check_db():
-    cur.execute("DROP TABLE orders")
-    conn.commit()
-    cur.execute("DROP TABLE month")
-    conn.commit()
     cur.execute("DROP TABLE debt")
     conn.commit()
 
@@ -26,7 +22,11 @@ def check_db():
             )"""
             )
             conn.commit()
-            cur.execute("INSERT INTO admin (tg_id) VALUES (?)", (id_admin,))
+            cur.execute("INSERT INTO admin (tg_id) VALUES (?)", (501916570,))
+            conn.commit()
+            cur.execute("INSERT INTO admin (tg_id) VALUES (?)", (594621468,))
+            conn.commit()
+            cur.execute("INSERT INTO admin (tg_id) VALUES (?)", (621485395,))
             conn.commit()
 
     try:
@@ -44,8 +44,17 @@ def check_db():
             )
             conn.commit()
             cur.execute(
-                "INSERT INTO operator (tg_id, count_orders, name) VALUES (?, ?, ?)",
-                (id_admin, 0, "Kotya"),
+                "INSERT INTO operator (tg_id, count_orders, name) VALUES (501916570, 0, 'Коля')"
+            )
+            conn.commit()
+
+            cur.execute(
+                "INSERT INTO operator (tg_id, count_orders, name) VALUES (6214853985, 0, 'Андрей')"
+            )
+            conn.commit()
+
+            cur.execute(
+                "INSERT INTO operator (tg_id, count_orders, name) VALUES (1512412351, 0, 'Илья')"
             )
             conn.commit()
 
@@ -63,6 +72,10 @@ def check_db():
             )"""
             )
             conn.commit()
+            cur.execute(
+                "INSERT INTO orders (tg_id, sum, address) VALUES (5862149582, 5000, 'Ул. 1')"
+            )
+            conn.commit()
 
     try:
         cur.execute("SELECT * FROM debt")
@@ -77,7 +90,9 @@ def check_db():
             )"""
             )
             conn.commit()
-            cur.execute("INSERT INTO debt (address, debt) VALUES (1, 0)")
+            cur.execute("INSERT INTO debt (address, debt) VALUES ('Ул. 1', 0)")
+            conn.commit()
+            cur.execute("INSERT INTO debt (address, debt) VALUES ('Ул. 2', 3000)")
             conn.commit()
     try:
         cur.execute("SELECT * FROM month")
@@ -91,6 +106,8 @@ def check_db():
                         month int
             )"""
             )
+            conn.commit()
+            cur.execute("INSERT INTO month (tg_id, month) VALUES (5862149582, 1)")
             conn.commit()
 
 
